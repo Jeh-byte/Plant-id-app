@@ -29,6 +29,17 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        // A fixed debug key committed to the repo, so every GitHub build is
+        // signed the same way and new APKs install over old ones.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
