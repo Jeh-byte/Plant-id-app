@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'pest_guide_screen.dart';
 import 'plantnet.dart';
 
 void main() {
@@ -87,13 +88,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _openPestGuide() {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const PestGuideScreen()));
+  }
+
   bool get _busy => _identifying;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Plant ID')),
+      appBar: AppBar(
+        title: const Text('Plant ID'),
+        actions: [
+          IconButton(
+            tooltip: 'Pests & diseases',
+            icon: const Icon(Icons.bug_report_outlined),
+            onPressed: _openPestGuide,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -151,6 +166,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: _busy ? null : () => _pick(ImageSource.gallery),
                     icon: const Icon(Icons.photo_library),
                     label: const Text('Choose from gallery'),
+                  ),
+                  TextButton.icon(
+                    key: const Key('pestGuideButton'),
+                    onPressed: _openPestGuide,
+                    icon: const Icon(Icons.bug_report_outlined),
+                    label: const Text('Pest & disease guide'),
                   ),
                 ],
               ),
