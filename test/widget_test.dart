@@ -7,6 +7,6 @@ void main() {
 
     expect(find.text('Plant ID'), findsOneWidget);
     expect(find.text('Take photo'), findsOneWidget);
-    expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.text('Gallery'), findsOneWidget);
   });
 }

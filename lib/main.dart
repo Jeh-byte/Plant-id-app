@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'herb_care_data.dart';
+import 'herb_care_screen.dart';
 import 'pest_guide_screen.dart';
 import 'plantnet.dart';
 
@@ -43,12 +45,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final ImagePicker _picker = ImagePicker();
   late final PlantNetClient _plantNet = widget.plantNet ?? PlantNetClient();
 
-  XFile? _photo;
+  final List<PlantPhoto> _photos = [];
   bool _identifying = false;
   List<PlantMatch>? _matches;
   String? _error;
 
-  Future<void> _pick(ImageSource source) async {
+  bool get _canAdd => !_identifying && _photos.length < maxPhotos;
+
+  Future<void> _addPhoto(ImageSource source) async {
     try {
       final photo = await _picker.pickImage(
         source: source,
@@ -56,12 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
         imageQuality: 85,
       );
       if (photo == null) return;
+      final organ = await _askOrgan();
       setState(() {
-        _photo = photo;
+        _photos.add(PlantPhoto(photo.path, organ ?? Organ.auto));
         _matches = null;
         _error = null;
       });
-      await _identify();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -69,15 +73,49 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<Organ?> _askOrgan() {
+    return showModalBottomSheet<Organ>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(title: Text('What does this photo show?')),
+            for (final o in Organ.values)
+              ListTile(
+                leading: Icon(_organIcon(o)),
+                title: Text(o.label),
+                onTap: () => Navigator.pop(context, o),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _setOrgan(PlantPhoto photo, Organ organ) {
+    setState(() {
+      photo.organ = organ;
+      _matches = null;
+    });
+  }
+
+  void _removePhoto(PlantPhoto photo) {
+    setState(() {
+      _photos.remove(photo);
+      _matches = null;
+      _error = null;
+    });
+  }
+
   Future<void> _identify() async {
-    final photo = _photo;
-    if (photo == null) return;
+    if (_photos.isEmpty) return;
     setState(() {
       _identifying = true;
       _error = null;
     });
     try {
-      final matches = await _plantNet.identify(photo.path);
+      final matches = await _plantNet.identify(List.of(_photos));
       if (!mounted) return;
       setState(() => _matches = matches);
     } catch (e) {
@@ -88,12 +126,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openPestGuide() {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const PestGuideScreen()));
+  void _startOver() {
+    setState(() {
+      _photos.clear();
+      _matches = null;
+      _error = null;
+    });
   }
 
-  bool get _busy => _identifying;
+  void _open(Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,10 +146,21 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Plant ID'),
         actions: [
           IconButton(
+            tooltip: 'Herb care',
+            icon: const Icon(Icons.spa_outlined),
+            onPressed: () => _open(const HerbCareScreen()),
+          ),
+          IconButton(
             tooltip: 'Pests & diseases',
             icon: const Icon(Icons.bug_report_outlined),
-            onPressed: _openPestGuide,
+            onPressed: () => _open(const PestGuideScreen()),
           ),
+          if (_photos.isNotEmpty)
+            IconButton(
+              tooltip: 'Start over',
+              icon: const Icon(Icons.refresh),
+              onPressed: _identifying ? null : _startOver,
+            ),
         ],
       ),
       body: SafeArea(
@@ -115,63 +169,71 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.all(24),
-                children: _photo == null
-                    ? [
-                        const SizedBox(height: 80),
-                        Icon(
-                          Icons.local_florist,
-                          size: 96,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(height: 16),
+                padding: const EdgeInsets.all(16),
+                children: _photos.isEmpty
+                    ? _emptyState(theme)
+                    : [
                         Text(
-                          'Take a photo of a plant to identify it',
-                          textAlign: TextAlign.center,
+                          'Photos (${_photos.length} of $maxPhotos)',
                           style: theme.textTheme.titleMedium,
                         ),
-                      ]
-                    : [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: AspectRatio(
-                            aspectRatio: 4 / 3,
-                            child: Image.file(
-                              File(_photo!.path),
-                              fit: BoxFit.cover,
+                        const SizedBox(height: 4),
+                        Text(
+                          'Add a leaf and a flower or fruit of the same plant '
+                          'for the best match.',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 8),
+                        for (final p in _photos)
+                          _PhotoRow(
+                            photo: p,
+                            enabled: !_identifying,
+                            onOrgan: (o) => _setOrgan(p, o),
+                            onRemove: () => _removePhoto(p),
+                          ),
+                        const SizedBox(height: 8),
+                        if (_matches == null && !_identifying && _error == null)
+                          FilledButton.icon(
+                            key: const Key('identifyButton'),
+                            onPressed: _identify,
+                            icon: const Icon(Icons.search),
+                            label: Text(
+                              _photos.length == 1
+                                  ? 'Identify'
+                                  : 'Identify from ${_photos.length} photos',
+                            ),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                           ),
-                        ),
                         const SizedBox(height: 16),
                         ..._resultsSection(theme),
                       ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
                 children: [
-                  FilledButton.icon(
-                    key: const Key('cameraButton'),
-                    onPressed: _busy ? null : () => _pick(ImageSource.camera),
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Take photo'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      key: const Key('cameraButton'),
+                      onPressed: _canAdd
+                          ? () => _addPhoto(ImageSource.camera)
+                          : null,
+                      icon: const Icon(Icons.camera_alt),
+                      label: Text(_photos.isEmpty ? 'Take photo' : 'Add photo'),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: _busy ? null : () => _pick(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text('Choose from gallery'),
-                  ),
-                  TextButton.icon(
-                    key: const Key('pestGuideButton'),
-                    onPressed: _openPestGuide,
-                    icon: const Icon(Icons.bug_report_outlined),
-                    label: const Text('Pest & disease guide'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _canAdd
+                          ? () => _addPhoto(ImageSource.gallery)
+                          : null,
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Gallery'),
+                    ),
                   ),
                 ],
               ),
@@ -181,6 +243,31 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  List<Widget> _emptyState(ThemeData theme) => [
+    const SizedBox(height: 48),
+    Icon(Icons.local_florist, size: 96, color: theme.colorScheme.primary),
+    const SizedBox(height: 16),
+    Text(
+      'Take a photo of a plant to identify it',
+      textAlign: TextAlign.center,
+      style: theme.textTheme.titleMedium,
+    ),
+    const SizedBox(height: 32),
+    OutlinedButton.icon(
+      key: const Key('herbCareButton'),
+      onPressed: () => _open(const HerbCareScreen()),
+      icon: const Icon(Icons.spa_outlined),
+      label: const Text('Herb care cards'),
+    ),
+    const SizedBox(height: 8),
+    OutlinedButton.icon(
+      key: const Key('pestGuideButton'),
+      onPressed: () => _open(const PestGuideScreen()),
+      icon: const Icon(Icons.bug_report_outlined),
+      label: const Text('Pest & disease guide'),
+    ),
+  ];
 
   List<Widget> _resultsSection(ThemeData theme) {
     if (_identifying) {
@@ -215,6 +302,75 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+IconData _organIcon(Organ organ) => switch (organ) {
+  Organ.auto => Icons.help_outline,
+  Organ.leaf => Icons.eco_outlined,
+  Organ.flower => Icons.local_florist_outlined,
+  Organ.fruit => Icons.apple,
+  Organ.bark => Icons.forest_outlined,
+  Organ.habit => Icons.park_outlined,
+};
+
+class _PhotoRow extends StatelessWidget {
+  const _PhotoRow({
+    required this.photo,
+    required this.enabled,
+    required this.onOrgan,
+    required this.onRemove,
+  });
+
+  final PlantPhoto photo;
+  final bool enabled;
+  final ValueChanged<Organ> onOrgan;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        children: [
+          Image.file(
+            File(photo.path),
+            width: 96,
+            height: 96,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) =>
+                const SizedBox(width: 96, height: 96, child: Icon(Icons.image)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButton<Organ>(
+              value: photo.organ,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
+              onChanged: enabled ? (o) => onOrgan(o!) : null,
+              items: [
+                for (final o in Organ.values)
+                  DropdownMenuItem(
+                    value: o,
+                    child: Row(
+                      children: [
+                        Icon(_organIcon(o), size: 20),
+                        const SizedBox(width: 8),
+                        Text(o.label),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Remove photo',
+            icon: const Icon(Icons.close),
+            onPressed: enabled ? onRemove : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MatchTile extends StatelessWidget {
   const _MatchTile({required this.match});
 
@@ -225,6 +381,7 @@ class _MatchTile extends StatelessWidget {
     final theme = Theme.of(context);
     final percent = (match.score * 100).round();
     final common = match.commonNames.take(3).join(', ');
+    final card = herbCardFor(match.scientificName);
     return Card(
       child: ListTile(
         title: Text(common.isEmpty ? match.scientificName : common),
@@ -232,10 +389,12 @@ class _MatchTile extends StatelessWidget {
           [
             match.scientificName,
             if (match.family.isNotEmpty) match.family,
+            if (card != null) 'Tap for care card',
           ].join(' · '),
           style: const TextStyle(fontStyle: FontStyle.italic),
         ),
         trailing: Text('$percent%', style: theme.textTheme.titleMedium),
+        onTap: card == null ? null : () => openHerbCard(context, card),
       ),
     );
   }

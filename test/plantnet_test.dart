@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -31,7 +32,7 @@ void main() {
     final matches = await PlantNetClient(
       client: client,
       apiKey: 'test-key',
-    ).identify(image.path);
+    ).identify([PlantPhoto(image.path)]);
 
     expect(matches, hasLength(1));
     expect(matches.first.scientificName, 'Sambucus nigra');
@@ -47,14 +48,30 @@ void main() {
     final matches = await PlantNetClient(
       client: client,
       apiKey: 'k',
-    ).identify(image.path);
+    ).identify([PlantPhoto(image.path)]);
     expect(matches, isEmpty);
   });
 
   test('fails clearly without an API key', () {
     expect(
-      PlantNetClient(apiKey: '').identify(image.path),
+      PlantNetClient(apiKey: '').identify([PlantPhoto(image.path)]),
       throwsA(isA<PlantNetException>()),
     );
+  });
+
+  test('sends one organ per photo, in order', () async {
+    final client = MockClient((request) async {
+      final body = latin1.decode(request.bodyBytes);
+      final leaf = body.indexOf('name="organs"');
+      final flower = body.indexOf('name="organs"', leaf + 1);
+      expect(body.indexOf('leaf', leaf), lessThan(flower));
+      expect(body.indexOf('flower', flower), greaterThan(flower));
+      expect('name="images"'.allMatches(body), hasLength(2));
+      return http.Response('{"results": []}', 200);
+    });
+    await PlantNetClient(client: client, apiKey: 'k').identify([
+      PlantPhoto(image.path, Organ.leaf),
+      PlantPhoto(image.path, Organ.flower),
+    ]);
   });
 }
