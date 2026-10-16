@@ -24,24 +24,28 @@ void main() {
       expect(content[0]['type'], 'image');
       expect(content[1]['text'], contains('Sambucus nigra'));
       return http.Response(
-          jsonEncode({
-            'stop_reason': 'end_turn',
-            'content': [
-              {'type': 'text', 'text': 'PLANT\nElder\nHEALTH\nAphids'}
-            ],
-          }),
-          200);
+        jsonEncode({
+          'stop_reason': 'end_turn',
+          'content': [
+            {'type': 'text', 'text': 'PLANT\nElder\nHEALTH\nAphids'},
+          ],
+        }),
+        200,
+      );
     });
 
-    final text = await PlantDoctor(client: client, apiKey: 'test-key')
-        .diagnose(image.path, plantNetGuess: 'Sambucus nigra (82%)');
+    final text = await PlantDoctor(
+      client: client,
+      apiKey: 'test-key',
+    ).diagnose(image.path, plantNetGuess: 'Sambucus nigra (82%)');
 
     expect(text, contains('Aphids'));
   });
 
   test('reports API errors', () {
-    final client =
-        MockClient((_) async => http.Response('{"error":"bad key"}', 401));
+    final client = MockClient(
+      (_) async => http.Response('{"error":"bad key"}', 401),
+    );
     expect(
       PlantDoctor(client: client, apiKey: 'k').diagnose(image.path),
       throwsA(isA<DiagnoseException>()),

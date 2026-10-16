@@ -23,7 +23,8 @@ class PlantMatch {
     return PlantMatch(
       scientificName: species['scientificNameWithoutAuthor'] as String? ?? '',
       commonNames: (species['commonNames'] as List?)?.cast<String>() ?? [],
-      family: (species['family'] as Map?)?['scientificNameWithoutAuthor']
+      family:
+          (species['family'] as Map?)?['scientificNameWithoutAuthor']
               as String? ??
           '',
       score: (json['score'] as num).toDouble(),
@@ -41,7 +42,7 @@ class PlantNetException implements Exception {
 /// Identifies a plant from one photo using the Pl@ntNet API.
 class PlantNetClient {
   PlantNetClient({http.Client? client, this.apiKey = plantNetApiKey})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
   final String apiKey;
@@ -62,14 +63,14 @@ class PlantNetClient {
       ..fields['organs'] = 'auto'
       ..files.add(await http.MultipartFile.fromPath('images', imagePath));
 
-    final response =
-        await http.Response.fromStream(await _client.send(request))
-            .timeout(const Duration(seconds: 30));
+    final response = await http.Response.fromStream(await _client.send(request))
+        .timeout(const Duration(seconds: 30));
 
     if (response.statusCode == 404) return [];
     if (response.statusCode != 200) {
       throw PlantNetException(
-          'Pl@ntNet error ${response.statusCode}: ${response.body}');
+        'Pl@ntNet error ${response.statusCode}: ${response.body}',
+      );
     }
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     return (body['results'] as List)

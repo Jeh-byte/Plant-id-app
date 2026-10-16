@@ -42,7 +42,7 @@ class DiagnoseException implements Exception {
 /// Asks Claude to diagnose diseases and pests in a plant photo.
 class PlantDoctor {
   PlantDoctor({http.Client? client, this.apiKey = anthropicApiKey})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
   final String apiKey;
@@ -97,10 +97,11 @@ class PlantDoctor {
 
     if (response.statusCode != 200) {
       throw DiagnoseException(
-          'Diagnosis failed (${response.statusCode}): ${response.body}');
+        'Diagnosis failed (${response.statusCode}): ${response.body}',
+      );
     }
-    final json = jsonDecode(utf8.decode(response.bodyBytes))
-        as Map<String, dynamic>;
+    final json =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     if (json['stop_reason'] == 'refusal') {
       throw DiagnoseException('Claude declined to diagnose this photo.');
     }

@@ -28,8 +28,10 @@ void main() {
         }]}''', 200);
     });
 
-    final matches = await PlantNetClient(client: client, apiKey: 'test-key')
-        .identify(image.path);
+    final matches = await PlantNetClient(
+      client: client,
+      apiKey: 'test-key',
+    ).identify(image.path);
 
     expect(matches, hasLength(1));
     expect(matches.first.scientificName, 'Sambucus nigra');
@@ -40,9 +42,12 @@ void main() {
 
   test('returns no matches when species is not found', () async {
     final client = MockClient(
-        (_) async => http.Response('{"message":"Species not found"}', 404));
-    final matches = await PlantNetClient(client: client, apiKey: 'k')
-        .identify(image.path);
+      (_) async => http.Response('{"message":"Species not found"}', 404),
+    );
+    final matches = await PlantNetClient(
+      client: client,
+      apiKey: 'k',
+    ).identify(image.path);
     expect(matches, isEmpty);
   });
 

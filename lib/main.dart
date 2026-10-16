@@ -72,9 +72,8 @@ class _HomeScreenState extends State<HomeScreen> {
       await _identify();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not get a photo: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not get a photo: $e')));
     }
   }
 
@@ -139,20 +138,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: _photo == null
                     ? [
                         const SizedBox(height: 80),
-                        Icon(Icons.local_florist,
-                            size: 96, color: theme.colorScheme.primary),
+                        Icon(
+                          Icons.local_florist,
+                          size: 96,
+                          color: theme.colorScheme.primary,
+                        ),
                         const SizedBox(height: 16),
-                        Text('Take a photo of a plant to identify it',
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.titleMedium),
+                        Text(
+                          'Take a photo of a plant to identify it',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleMedium,
+                        ),
                       ]
                     : [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: AspectRatio(
                             aspectRatio: 4 / 3,
-                            child: Image.file(File(_photo!.path),
-                                fit: BoxFit.cover),
+                            child: Image.file(
+                              File(_photo!.path),
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -168,17 +174,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   FilledButton.icon(
                     key: const Key('cameraButton'),
-                    onPressed:
-                        _busy ? null : () => _pick(ImageSource.camera),
+                    onPressed: _busy ? null : () => _pick(ImageSource.camera),
                     icon: const Icon(Icons.camera_alt),
                     label: const Text('Take photo'),
                     style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   TextButton.icon(
-                    onPressed:
-                        _busy ? null : () => _pick(ImageSource.gallery),
+                    onPressed: _busy ? null : () => _pick(ImageSource.gallery),
                     icon: const Icon(Icons.photo_library),
                     label: const Text('Choose from gallery'),
                   ),
@@ -245,8 +250,10 @@ extension on _HomeScreenState {
           ),
         ),
       if (_diagnosisError != null)
-        Text(_diagnosisError!,
-            style: TextStyle(color: theme.colorScheme.error)),
+        Text(
+          _diagnosisError!,
+          style: TextStyle(color: theme.colorScheme.error),
+        ),
       if (_diagnosis == null)
         OutlinedButton.icon(
           key: const Key('diagnoseButton'),
