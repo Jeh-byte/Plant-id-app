@@ -6,11 +6,11 @@ Right now it has a home screen with a camera button (and a gallery option) that 
 
 ## Install on your phone
 
-1. Open the **Actions** tab of this repo and click the latest green **Build APK** run.
-2. Under **Artifacts**, download `plant-id-app-debug-apk` and unzip it to get `app-debug.apk`.
-3. Copy the APK to your phone (or download it there directly), open it, and allow "Install unknown apps" for your browser or file manager when Android asks.
+On your phone, open this link in Chrome (no GitHub sign-in needed):
 
-To update, install a newer APK over the old one.
+https://github.com/Jeh-byte/plant-id-app/releases/latest/download/app-debug.apk
+
+Open the downloaded file and allow "Install unknown apps" when Android asks. The link always points at the newest build, so use the same link to update.
 
 ## Develop
 
